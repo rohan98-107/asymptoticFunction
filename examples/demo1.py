@@ -1,8 +1,7 @@
-# examples/demo1.py
-
 import numpy as np
 import sympy as sp
 from asymptoticFunction.core.asymptotic_function import asymptotic_function
+from asymptoticFunction.core.utils import make_vectorization_safe
 
 
 def _fmt(val):
@@ -43,8 +42,10 @@ def run_case(name, f_num, d, kind=None, params=None, f_for_analytical=None):
 def main():
     rows = []
 
+    V = make_vectorization_safe  # shorthand alias
+
     # 1. linear
-    f = lambda x: 3 * x[0] + 2 * x[1] + 1
+    f = V(lambda x: 3 * x[0] + 2 * x[1] + 1)
     d = np.array([1.0, 2.0])
     rows.append(run_case("Linear",
                          f, d,
@@ -52,7 +53,7 @@ def main():
                          params={"a": np.array([3., 2.])}))
 
     # 2. norm
-    f = lambda x: np.linalg.norm(x, 2)
+    f = V(lambda x: np.linalg.norm(x, 2))
     d = np.array([-3.0, 4.0])
     rows.append(run_case("Norm (L2)",
                          f, d,
@@ -61,7 +62,7 @@ def main():
 
     # 3. weighted norm
     W = np.array([[2.0, 0.0], [0.0, 1.0]])
-    f = lambda x: np.linalg.norm(W @ x, 2)
+    f = V(lambda x: np.linalg.norm(W @ x, 2))
     d = np.array([1.0, -2.0])
     rows.append(run_case("Weighted Norm",
                          f, d,
@@ -70,7 +71,7 @@ def main():
 
     # 4. affine + norm
     a = np.array([1.0, 2.0])
-    f = lambda x: np.dot(a, x) + np.linalg.norm(x)
+    f = V(lambda x: np.dot(a, x) + np.linalg.norm(x))
     d = np.array([-1.0, 1.0])
     rows.append(run_case("Affine + Norm",
                          f, d,
@@ -79,7 +80,7 @@ def main():
 
     # 5. abs linear
     a = np.array([1.0, -2.0])
-    f = lambda x: abs(np.dot(a, x))
+    f = V(lambda x: abs(np.dot(a, x)))
     d = np.array([1.0, 2.0])
     rows.append(run_case("Abs Linear",
                          f, d,
@@ -90,7 +91,7 @@ def main():
     A = np.array([[1.0, 0.0],
                   [0.0, 2.0],
                   [-1.0, -1.0]])
-    f = lambda x: np.max(A @ x)
+    f = V(lambda x: np.max(A @ x))
     d = np.array([1.0, -1.0])
     rows.append(run_case("Max-Affine",
                          f, d,
@@ -99,7 +100,7 @@ def main():
 
     # 7. indicator halfspace
     a = np.array([1.0, 1.0])
-    f = lambda x: 0.0 if np.dot(a, x) <= 0 else np.inf
+    f = V(lambda x: 0.0 if np.dot(a, x) <= 0 else np.inf)
     d = np.array([-1.0, 0.5])
     rows.append(run_case("Indicator (Halfspace)",
                          f, d,
@@ -108,7 +109,7 @@ def main():
 
     # 8. indicator hyperplane
     a = np.array([1.0, -1.0])
-    f = lambda x: 0.0 if abs(np.dot(a, x)) <= 1e-12 else np.inf
+    f = V(lambda x: 0.0 if abs(np.dot(a, x)) <= 1e-12 else np.inf)
     d = np.array([1.0, 1.0])
     rows.append(run_case("Indicator (Hyperplane)",
                          f, d,
@@ -118,7 +119,7 @@ def main():
     # 9. support function
     C_points = np.array([[1.0, 0.0],
                          [0.0, 1.0]])
-    f = lambda x: np.max(C_points @ x)
+    f = V(lambda x: np.max(C_points @ x))
     d = np.array([1.0, 2.0])
     rows.append(run_case("Support Function",
                          f, d,
@@ -127,7 +128,7 @@ def main():
 
     # 10. distance to cone
     proj_K = lambda x: np.maximum(x, 0.0)
-    f = lambda x: np.linalg.norm(x - proj_K(x))
+    f = V(lambda x: np.linalg.norm(x - proj_K(x)))
     d = np.array([-1.0, 2.0])
     rows.append(run_case("Distance to Cone",
                          f, d,
@@ -138,41 +139,41 @@ def main():
     Q = np.array([[2.0, 0.0],
                   [0.0, -1.0]])
     b = np.array([1.0, 0.0])
-    f = lambda x: x.T @ Q @ x + b @ x
+    f = V(lambda x: x.T @ Q @ x + b @ x)
     d = np.array([1.0, 1.0])
     rows.append(run_case("Quadratic",
                          f, d,
                          kind="quadratic",
                          params={"Q": Q, "b": b}))
 
-    # 12. polynomial: analytical = sympy expr, numerical = lambdified
-    f = lambda x: x[0]**3 - 2*x[0]*x[1] + 5*x[0] + 1
+    # 12. polynomial
+    f = V(lambda x: x[0]**3 - 2*x[0]*x[1] + 5*x[0] + 1)
     d = np.array([1.0, 2.0])
     rows.append(run_case("Polynomial",
                          f, d,
                          kind="polynomial"))
 
-    # 13. hinge
+    # 13. hinge loss
     A = np.array([[1.0, -1.0],
                   [0.5, 2.0]])
     y = np.array([1.0, -1.0])
-    f = lambda x: np.sum(np.maximum(0.0, 1 - y * (A @ x)))
+    f = V(lambda x: np.sum(np.maximum(0.0, 1 - y * (A @ x))))
     d = np.array([1.0, 0.5])
     rows.append(run_case("Hinge Loss",
                          f, d,
                          kind="hinge_sum",
                          params={"A": A, "y": y}))
 
-    # 14. logistic
-    f = lambda x: np.sum(np.log(1 + np.exp(-y * (A @ x))))
+    # 14. logistic loss
+    f = V(lambda x: np.sum(np.log(1 + np.exp(-y * (A @ x)))))
     d = np.array([1.0, 0.5])
     rows.append(run_case("Logistic Loss",
                          f, d,
                          kind="logistic_sum",
                          params={"A": A, "y": y}))
 
-    # 15. huber
-    f = lambda x: np.sum(np.abs(A @ x))  # simple version, matches your asymptotic
+    # 15. huber loss
+    f = V(lambda x: np.sum(np.abs(A @ x)))
     d = np.array([1.0, 0.5])
     rows.append(run_case("Huber Loss",
                          f, d,
@@ -180,18 +181,18 @@ def main():
                          params={"A": A, "delta": 1.0}))
 
     # 16. exponential loss
-    f = lambda x: np.sum(np.exp(-y * (A @ x)))
+    f = V(lambda x: np.sum(np.exp(-y * (A @ x))))
     d = np.array([1.0, 0.5])
     rows.append(run_case("Exponential Loss",
                          f, d,
                          kind="exponential_sum",
                          params={"A": A, "y": y}))
 
-    # 17. sum exp
+    # 17. sum of exponentials
     C = np.array([[1.0, 0.0],
                   [-1.0, 2.0],
                   [0.0, -1.0]])
-    f = lambda x: np.sum(np.exp(C @ x))
+    f = V(lambda x: np.sum(np.exp(C @ x)))
     d = np.array([1.0, 0.5])
     rows.append(run_case("Sum of Exponentials",
                          f, d,
@@ -199,12 +200,13 @@ def main():
                          params={"C": C}))
 
     # 18. log-sum-exp
-    f = lambda x: np.log(np.sum(np.exp(C @ x)))
+    f = V(lambda x: np.log(np.sum(np.exp(C @ x))))
     rows.append(run_case("Log-sum-exp",
                          f, d,
                          kind="log_sum_exp",
                          params={"C": C}))
 
+    # --- Output table ---
     header = f"{'Function Type':<28} | {'d':<12} | {'Analytical f∞(d)':<18} | {'Numerical f∞(d)':<18}"
     print("\n" + "=" * len(header))
     print(header)

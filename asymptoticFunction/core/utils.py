@@ -3,7 +3,6 @@ import numpy as np
 
 
 def is_proper(f, x0, n_checks=100):
-
     rng = np.random.default_rng(SEED)
 
     x0 = np.asarray(x0, dtype=float)
@@ -58,36 +57,25 @@ def safe_eval(f, x, magnitude_factor=1e40):
         # Try vectorized evaluation first
         val = f(x)
 
-        if x.ndim == 2 and val.ndim == 0:
-            val = np.full(x.shape[0], val)
-        elif x.ndim == 2 and val.ndim == 1 and val.shape[0] != x.shape[0]:
-            # shape mismatch: try row-wise evaluation
-            out = []
-            for xi in x:
-                try:
-                    out.append(f(xi))
-                except Exception:
-                    out.append(np.nan)
-            val = np.array(out, dtype=float)
-
+        # --- Minimal, universal fallback for batched inputs ---
+        if x.ndim == 2:
+            # if f returned scalar or wrong-length array → evaluate row-wise
+            if (not isinstance(val, np.ndarray)) or (val.ndim == 0) or (val.shape[0] != x.shape[0]):
+                val = np.array([f(xi) for xi in x], dtype=float)
 
     except ZeroDivisionError:
-        # True divide-by-zero → inf
         shape = x.shape[:-1] if x.ndim > 1 else ()
         return np.full(shape, np.inf)
 
     except OverflowError:
-        # Numeric overflow → inf
         shape = x.shape[:-1] if x.ndim > 1 else ()
         return np.full(shape, np.inf)
 
     except (FloatingPointError, ValueError, TypeError):
-        # Generic numeric or dtype issue → nan
         shape = x.shape[:-1] if x.ndim > 1 else ()
         return np.full(shape, np.nan)
 
     except Exception:
-        # Function not vectorized → evaluate row-wise
         if isinstance(x, np.ndarray) and x.ndim == 2:
             out = []
             for xi in x:
@@ -100,17 +88,35 @@ def safe_eval(f, x, magnitude_factor=1e40):
                 except Exception:
                     out.append(np.nan)
             return np.array(out, dtype=float)
-        raise  # re-raise unknown programming errors
+        raise
 
     val = np.asarray(val, dtype=float)
     val[np.isnan(val)] = np.nan
 
-    # Promote extremely large finite values to ±inf
     mask = np.isfinite(val) & (np.abs(val) > tol)
     if np.any(mask):
         val[mask] = np.sign(val[mask]) * np.inf
 
-    # Scalar normalization
     if val.ndim == 0:
         return float(val)
     return val
+
+
+def make_vectorization_safe(f):
+    """
+    Example
+    -------
+        >>> a = np.array([1., 2.])
+        >>> f = lambda x: np.dot(a, x) + np.linalg.norm(x)
+        >>> f_safe = make_vectorization_safe(f)
+        >>> X = np.array([[1,2], [3,4]])
+        >>> f_safe(X)
+    array([5.236..., 10.650...])
+    """
+
+    def wrapped(X):
+        X = np.atleast_2d(X)
+        out = [f(xi) for xi in X]
+        return np.array(out, dtype=float)
+
+    return wrapped

@@ -5,6 +5,7 @@ from ..numerical.sampling import sign_preserving_jitter
 
 def approximateAsymptoticFunc(f, d, verbose=False, tol=1e-3, max_cycles=5):
     d = np.asarray(d, dtype=float)
+    orig_norm = np.linalg.norm(d)
     d = normalize_direction(d)
 
     # --- Case 1: Undefined direction ---
@@ -86,4 +87,4 @@ def approximateAsymptoticFunc(f, d, verbose=False, tol=1e-3, max_cycles=5):
         prev_tail = cur_tail
         t_min, t_max = t_max, t_max * 10  # grow t-range
 
-    return approximateLimInf(vals)
+    return orig_norm * approximateLimInf(vals)

@@ -51,19 +51,19 @@ def _decompose_polynomial(f, x, max_deg=4):
     for t in t_vals:
         try:
             val = f(t * x)
-            print(f"  f({t} * x) = {val}  (type={type(val)})")
+            # print(f"  f({t} * x) = {val}  (type={type(val)})")
             val = float(np.asarray(val).squeeze())  # ensure scalar
         except Exception as e:
             print(f"  ERROR at t={t}: {e}")
             val = np.nan
         f_vals.append(val)
     f_vals = np.array(f_vals, dtype=float)
-    print(f"  f_vals = {f_vals}")
+    # print(f"  f_vals = {f_vals}")
 
     # Build Vandermonde and solve least squares for stability
     V = np.vander(t_vals, N=max_deg + 1, increasing=True)
     coeffs, *_ = np.linalg.lstsq(V, f_vals, rcond=None)
-    print(f"  coeffs = {coeffs}\n")
+    # print(f"  coeffs = {coeffs}\n")
     return coeffs
 
 

@@ -6,7 +6,7 @@ import random
 
 INFTY = math.inf
 EPS = 1e-8
-SEED = 123
+SEED = random.uniform(1, 100)
 
 np.random.seed(SEED)
 random.seed(SEED)
