@@ -41,51 +41,41 @@ def run_case(name, f_num, d, kind=None, params=None, f_for_analytical=None):
 
 def main():
     rows = []
-
     V = make_vectorization_safe  # shorthand alias
 
     # 1. linear
     f = V(lambda x: 3 * x[0] + 2 * x[1] + 1)
     d = np.array([1.0, 2.0])
-    rows.append(run_case("Linear",
-                         f, d,
+    rows.append(run_case("Linear", f, d,
                          kind="linear",
                          params={"a": np.array([3., 2.])}))
 
     # 2. norm
     f = V(lambda x: np.linalg.norm(x, 2))
     d = np.array([-3.0, 4.0])
-    rows.append(run_case("Norm (L2)",
-                         f, d,
-                         kind="norm",
-                         params={"p": 2}))
+    rows.append(run_case("Norm (L2)", f, d,
+                         kind="norm", params={"p": 2}))
 
     # 3. weighted norm
     W = np.array([[2.0, 0.0], [0.0, 1.0]])
     f = V(lambda x: np.linalg.norm(W @ x, 2))
     d = np.array([1.0, -2.0])
-    rows.append(run_case("Weighted Norm",
-                         f, d,
-                         kind="weighted_norm",
-                         params={"W": W}))
+    rows.append(run_case("Weighted Norm", f, d,
+                         kind="weighted_norm", params={"W": W}))
 
     # 4. affine + norm
     a = np.array([1.0, 2.0])
     f = V(lambda x: np.dot(a, x) + np.linalg.norm(x))
     d = np.array([-1.0, 1.0])
-    rows.append(run_case("Affine + Norm",
-                         f, d,
-                         kind="affine_plus_norm",
-                         params={"a": a, "c": 1.0}))
+    rows.append(run_case("Affine + Norm", f, d,
+                         kind="affine_plus_norm", params={"a": a, "c": 1.0}))
 
     # 5. abs linear
     a = np.array([1.0, -2.0])
     f = V(lambda x: abs(np.dot(a, x)))
     d = np.array([1.0, 2.0])
-    rows.append(run_case("Abs Linear",
-                         f, d,
-                         kind="abs_linear",
-                         params={"a": a}))
+    rows.append(run_case("Abs Linear", f, d,
+                         kind="abs_linear", params={"a": a}))
 
     # 6. max affine
     A = np.array([[1.0, 0.0],
@@ -93,47 +83,37 @@ def main():
                   [-1.0, -1.0]])
     f = V(lambda x: np.max(A @ x))
     d = np.array([1.0, -1.0])
-    rows.append(run_case("Max-Affine",
-                         f, d,
-                         kind="max_affine",
-                         params={"A": A}))
+    rows.append(run_case("Max-Affine", f, d,
+                         kind="max_affine", params={"A": A}))
 
     # 7. indicator halfspace
     a = np.array([1.0, 1.0])
     f = V(lambda x: 0.0 if np.dot(a, x) <= 0 else np.inf)
     d = np.array([-1.0, 0.5])
-    rows.append(run_case("Indicator (Halfspace)",
-                         f, d,
-                         kind="indicator_halfspace",
-                         params={"a": a}))
+    rows.append(run_case("Indicator (Halfspace)", f, d,
+                         kind="indicator_halfspace", params={"a": a}))
 
     # 8. indicator hyperplane
     a = np.array([1.0, -1.0])
     f = V(lambda x: 0.0 if abs(np.dot(a, x)) <= 1e-12 else np.inf)
     d = np.array([1.0, 1.0])
-    rows.append(run_case("Indicator (Hyperplane)",
-                         f, d,
-                         kind="indicator_hyperplane",
-                         params={"a": a}))
+    rows.append(run_case("Indicator (Hyperplane)", f, d,
+                         kind="indicator_hyperplane", params={"a": a}))
 
     # 9. support function
     C_points = np.array([[1.0, 0.0],
                          [0.0, 1.0]])
     f = V(lambda x: np.max(C_points @ x))
     d = np.array([1.0, 2.0])
-    rows.append(run_case("Support Function",
-                         f, d,
-                         kind="support_function",
-                         params={"C_points": C_points}))
+    rows.append(run_case("Support Function", f, d,
+                         kind="support_function", params={"C_points": C_points}))
 
     # 10. distance to cone
     proj_K = lambda x: np.maximum(x, 0.0)
     f = V(lambda x: np.linalg.norm(x - proj_K(x)))
     d = np.array([-1.0, 2.0])
-    rows.append(run_case("Distance to Cone",
-                         f, d,
-                         kind="distance_cone",
-                         params={"proj_K": proj_K}))
+    rows.append(run_case("Distance to Cone", f, d,
+                         kind="distance_cone", params={"proj_K": proj_K}))
 
     # 11. quadratic
     Q = np.array([[2.0, 0.0],
@@ -141,17 +121,13 @@ def main():
     b = np.array([1.0, 0.0])
     f = V(lambda x: x.T @ Q @ x + b @ x)
     d = np.array([1.0, 1.0])
-    rows.append(run_case("Quadratic",
-                         f, d,
-                         kind="quadratic",
-                         params={"Q": Q, "b": b}))
+    rows.append(run_case("Quadratic", f, d,
+                         kind="quadratic", params={"Q": Q, "b": b}))
 
     # 12. polynomial
     f = V(lambda x: x[0]**3 - 2*x[0]*x[1] + 5*x[0] + 1)
     d = np.array([1.0, 2.0])
-    rows.append(run_case("Polynomial",
-                         f, d,
-                         kind="polynomial"))
+    rows.append(run_case("Polynomial", f, d, kind="polynomial"))
 
     # 13. hinge loss
     A = np.array([[1.0, -1.0],
@@ -159,54 +135,80 @@ def main():
     y = np.array([1.0, -1.0])
     f = V(lambda x: np.sum(np.maximum(0.0, 1 - y * (A @ x))))
     d = np.array([1.0, 0.5])
-    rows.append(run_case("Hinge Loss",
-                         f, d,
-                         kind="hinge_sum",
-                         params={"A": A, "y": y}))
+    rows.append(run_case("Hinge Loss", f, d,
+                         kind="hinge_sum", params={"A": A, "y": y}))
 
-    # 14. logistic loss
-    f = V(lambda x: np.sum(np.log(1 + np.exp(-y * (A @ x)))))
+    # 14. logistic loss (stabilized)
+    def logistic_stable(x):
+        z = -y * (A @ x)
+        z_clip = np.clip(z, -700, 700)
+        return np.sum(np.log1p(np.exp(z_clip)))
+    f = V(logistic_stable)
     d = np.array([1.0, 0.5])
-    rows.append(run_case("Logistic Loss",
-                         f, d,
-                         kind="logistic_sum",
-                         params={"A": A, "y": y}))
+    rows.append(run_case("Logistic Loss", f, d,
+                         kind="logistic_sum", params={"A": A, "y": y}))
 
     # 15. huber loss
     f = V(lambda x: np.sum(np.abs(A @ x)))
     d = np.array([1.0, 0.5])
-    rows.append(run_case("Huber Loss",
-                         f, d,
-                         kind="huber_sum",
-                         params={"A": A, "delta": 1.0}))
+    rows.append(run_case("Huber Loss", f, d,
+                         kind="huber_sum", params={"A": A, "delta": 1.0}))
 
-    # 16. exponential loss
-    f = V(lambda x: np.sum(np.exp(-y * (A @ x))))
+    # 16. exponential loss (stabilized)
+    def exponential_stable(x):
+        z = -y * (A @ x)
+        z_clip = np.clip(z, -700, 700)
+        return np.sum(np.exp(z_clip))
+    f = V(exponential_stable)
     d = np.array([1.0, 0.5])
-    rows.append(run_case("Exponential Loss",
-                         f, d,
-                         kind="exponential_sum",
-                         params={"A": A, "y": y}))
+    rows.append(run_case("Exponential Loss", f, d,
+                         kind="exponential_sum", params={"A": A, "y": y}))
 
-    # 17. sum of exponentials
+    # 17. sum of exponentials (stabilized)
     C = np.array([[1.0, 0.0],
                   [-1.0, 2.0],
                   [0.0, -1.0]])
-    f = V(lambda x: np.sum(np.exp(C @ x)))
+    def sumexp_stable(x):
+        z = C @ x
+        z_clip = np.clip(z, -700, 700)
+        return np.sum(np.exp(z_clip))
+    f = V(sumexp_stable)
     d = np.array([1.0, 0.5])
-    rows.append(run_case("Sum of Exponentials",
-                         f, d,
-                         kind="sum_exp",
-                         params={"C": C}))
+    rows.append(run_case("Sum of Exponentials", f, d,
+                         kind="sum_exp", params={"C": C}))
 
-    # 18. log-sum-exp
-    f = V(lambda x: np.log(np.sum(np.exp(C @ x))))
-    rows.append(run_case("Log-sum-exp",
-                         f, d,
-                         kind="log_sum_exp",
-                         params={"C": C}))
+    # 18. log-sum-exp (stabilized)
+    def logsumexp_stable(x):
+        z = C @ x
+        z_clip = np.clip(z, -700, 700)
+        return np.log(np.sum(np.exp(z_clip)))
+    f = V(logsumexp_stable)
+    rows.append(run_case("Log-sum-exp", f, d,
+                         kind="log_sum_exp", params={"C": C}))
 
-    # --- Output table ---
+    # === HIGH-DIMENSIONAL DEMO (n = 15) ===
+    n = 15
+    rng = np.random.default_rng(0)
+    d = rng.normal(size=n)
+    a = rng.normal(size=n)
+    A = rng.normal(size=(5, n))
+
+    f = V(lambda x: np.dot(a, x) + 1)
+    rows.append(run_case(f"Linear (n={n})", f, d,
+                         kind="linear", params={"a": a}))
+
+    f = V(lambda x: np.linalg.norm(x))
+    rows.append(run_case(f"Norm (L2, n={n})", f, d,
+                         kind="norm", params={"p": 2}))
+
+    f = V(lambda x: np.dot(a, x) + np.linalg.norm(x))
+    rows.append(run_case(f"Affine + Norm (n={n})", f, d,
+                         kind="affine_plus_norm", params={"a": a, "c": 1.0}))
+
+    f = V(lambda x: np.max(A @ x))
+    rows.append(run_case(f"Max-Affine (n={n})", f, d,
+                         kind="max_affine", params={"A": A}))
+
     header = f"{'Function Type':<28} | {'d':<12} | {'Analytical f∞(d)':<18} | {'Numerical f∞(d)':<18}"
     print("\n" + "=" * len(header))
     print(header)
