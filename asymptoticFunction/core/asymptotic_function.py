@@ -39,7 +39,10 @@ def asymptotic_function(f, d, kind=None, params=None, strict_kind=False):
     if np.any(np.isnan(d)):
         raise ValueError("Direction 'd' contains NaNs.")
 
-    func = CallableFunction(f)
+    func = f if isinstance(f, CallableFunction) else CallableFunction(f)
+
+    kind = kind if kind is not None else func.kind
+    params = params if params is not None else func.params
 
     # Try analytical form first
     if kind is not None:

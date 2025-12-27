@@ -43,28 +43,35 @@ def _dot_safe(a, d):
     return np.dot(d, a)  # shape (k,)
 
 
-def _decompose_polynomial(f, x, max_deg=4):
-    x = np.asarray(x, dtype=float)
-    t_vals = np.arange(1, max_deg + 2, dtype=float)
-    f_vals = []
-    # print(f"\n[DEBUG] Decomposing polynomial at x={x}")
-    for t in t_vals:
-        try:
-            val = f(t * x)
-            # print(f"  f({t} * x) = {val}  (type={type(val)})")
-            val = float(np.asarray(val).squeeze())  # ensure scalar
-        except Exception as e:
-            print(f"  ERROR at t={t}: {e}")
-            val = np.nan
-        f_vals.append(val)
-    f_vals = np.array(f_vals, dtype=float)
-    # print(f"  f_vals = {f_vals}")
+def _decompose_polynomial(f, d, max_deg=6):
+    d = np.asarray(d, dtype=float)
 
-    # Build Vandermonde and solve least squares for stability
-    V = np.vander(t_vals, N=max_deg + 1, increasing=True)
-    coeffs, *_ = np.linalg.lstsq(V, f_vals, rcond=None)
-    # print(f"  coeffs = {coeffs}\n")
-    return coeffs
+    t_vals = [1.0, 2.0, 4.0, 8.0]
+    vals = []
+
+    for t in t_vals:
+        v = f(t * d)
+        v = float(np.asarray(v).squeeze())
+        vals.append(v)
+
+    vals = np.array(vals, dtype=float)
+
+    if not np.any(np.abs(vals) > 1e-12):
+        return 0, 0
+
+    abs_vals = np.abs(vals)
+
+    for k in range(max_deg, 1, -1):
+        scaled = abs_vals / (np.array(t_vals) ** k)
+        if np.all(scaled > 1e-8):
+            sign = np.sign(vals[-1])
+            return k, int(sign)
+
+    ratios = vals[-1] / t_vals[-1]
+    if abs(ratios) > 1e-12:
+        return 1, int(np.sign(ratios))
+
+    return 0, 0
 
 
 # =====================================================================
@@ -197,31 +204,17 @@ def quadratic_asymptotic(f, d, *, Q, b=None, **kw):
     return float(np.dot(b, d))
 
 
-def polynomial_asymptotic(f, d, max_deg=4):
-    try:
-        coeffs = _decompose_polynomial(f, d, max_deg=max_deg)
-    except Exception as e:
-        print(f"polynomial decomposition not found: {e}")
-        raise
+def polynomial_asymptotic(f, d, max_deg=6):
+    mu, sign = _decompose_polynomial(f, d, max_deg=max_deg)
 
-    mu = None
-    for k in reversed(range(len(coeffs))):
-        if np.isfinite(coeffs[k]) and abs(coeffs[k]) > 1e-12:
-            mu = k
-            phi_mu = coeffs[k]
-            break
-
-    if mu is None:
+    if mu == 0:
         return 0.0
     if mu == 1:
-        return phi_mu
-    elif mu >= 2:
-        if phi_mu > 0:
-            return np.inf
-        elif phi_mu < 0:
-            return -np.inf
-        else:
-            return 0.0
+        return float(f(d))
+    if sign > 0:
+        return np.inf
+    if sign < 0:
+        return -np.inf
     return 0.0
 
 

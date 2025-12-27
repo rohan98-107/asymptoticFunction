@@ -14,10 +14,12 @@ from typing import Any, Callable, Optional
 
 class CallableFunction:
 
-    def __init__(self, f):
+    def __init__(self, f, *, kind=None, params=None):
         if not callable(f):
             raise TypeError("Expected a callable f(x).")
         self.f = f
+        self.kind = kind
+        self.params = {} if params is None else params
 
     def __call__(self, x) -> float:
         arr = np.asarray(x, dtype=float)

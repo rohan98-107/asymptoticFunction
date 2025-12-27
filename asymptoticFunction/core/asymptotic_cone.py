@@ -4,6 +4,7 @@ import warnings
 from ..numerical.approximation import approximateAsymptoticFunc
 from ..numerical.sampling import sample_sphere
 from ..known.registry import get_analytical_form
+from ..core.types import CallableFunction
 
 
 def negate(func):
@@ -34,20 +35,20 @@ class AsymptoticCone:
         self.results = {}
 
     def _resolve_constraint(self, spec):
-        """
-        matches analytical functions to known registry and ensures that each function is also a callable
-        """
+        if isinstance(spec, CallableFunction):
+            return spec
+
         if isinstance(spec, dict):
-            func = spec.get("func")
-            kind = spec.get("kind")
-            params = {k: v for k, v in spec.items() if k not in ("func", "kind")}
-        else:
-            func, kind, params = spec, None, {}
+            return CallableFunction(
+                spec.get("func"),
+                kind=spec.get("kind"),
+                params={k: v for k, v in spec.items() if k not in ("func", "kind")}
+            )
 
-        if not callable(func):
-            raise TypeError(f"Constraint function must be callable, got {type(func).__name__} instead.")
+        if callable(spec):
+            return CallableFunction(spec)
 
-        return func, kind, params
+        raise TypeError(f"Constraint must be callable or CallableFunction, got {type(spec).__name__}")
 
     def _compute_asymptotic_values(self, dirs):
         """
@@ -66,8 +67,9 @@ class AsymptoticCone:
         registry_cache = {}
 
         for i, f_spec in enumerate(self.f_list):
-            f, kind, params = self._resolve_constraint(f_spec)
+            cf = self._resolve_constraint(f_spec)
             analytical = None
+            kind = cf.kind
 
             if kind is not None:
                 if kind in registry_cache:
@@ -85,12 +87,13 @@ class AsymptoticCone:
                         analytical = None
 
             for k, d in enumerate(dirs):
-                val = analytical(f, d, **params) if analytical else approximateAsymptoticFunc(f, d)
+                val = analytical(cf.f, d, **cf.params) if analytical else approximateAsymptoticFunc(cf.f, d)
                 F_inf[i, k] = val
 
         for j, g_spec in enumerate(self.g_list):
-            g, kind, params = self._resolve_constraint(g_spec)
+            cf = self._resolve_constraint(g_spec)
             analytical = None
+            kind = cf.kind
 
             if kind is not None:
                 if kind in registry_cache:
@@ -108,9 +111,10 @@ class AsymptoticCone:
                         analytical = None
 
             for k, d in enumerate(dirs):
-                val_pos = analytical(g, d, **params) if analytical else approximateAsymptoticFunc(g, d)
-                g_neg = negate(g)
-                val_neg = analytical(g_neg, d, **params) if analytical else approximateAsymptoticFunc(g_neg, d)
+                val_pos = analytical(cf.f, d, **cf.params) if analytical else approximateAsymptoticFunc(cf.f, d)
+                g_neg = negate(cf.f)
+                val_neg = analytical(g_neg, d, **cf.params) if analytical else approximateAsymptoticFunc(g_neg, d)
+
                 G_inf[2 * j, k] = val_pos
                 G_inf[2 * j + 1, k] = val_neg
 
