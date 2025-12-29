@@ -1,66 +1,63 @@
-# core/asymptotic_function.py
+# asymptoticFunction/core/asymptotic_function.py
 
 import numpy as np
+
 from ..core.types import AsymptoticResult, CallableFunction
 from ..numerical.approximation import approximateAsymptoticFunc
-from ..known.registry import get_analytical_form
 
 __all__ = ["asymptotic_function", "asymptoticFunction"]
 
 
-def asymptotic_function(f, d, kind=None, params=None, strict_kind=False):
+def asymptotic_function(f, d, *, params=None):
     """
+    Numerically approximate the asymptotic growth of f along direction d.
+
+    This routine is intentionally:
+        - structure-agnostic
+        - heuristic-free
+        - visualization-neutral
+
+    It performs a numerical probe of the form:
+        f_infty(d) ≈ lim f(t d) / t
+
     Parameters
     ----------
-    f : callable
-        Function whose asymptotic behavior is to be evaluated.
+    f : callable or CallableFunction
+        Function whose asymptotic behavior is evaluated.
     d : array_like
-        Direction at which to compute f∞(d).
-    kind : str, optional
-        Name of a known analytical form. If provided, uses the registry.
+        Direction vector.
     params : dict, optional
-        Extra parameters for analytical or numerical routines.
-    strict_kind : bool, default False
-        If True, raises an error if the analytical form is not found or fails.
+        Passed to the numerical approximation routine.
 
     Returns
     -------
     AsymptoticResult
-        Object containing:
-        - value : the computed asymptotic value
-        - method : "analytical" or "numerical"
-        - kind : analytical kind (if any)
+        value  : numerical asymptotic estimate
+        method : "numerical"
+        kind   : None
     """
 
     if params is None:
         params = {}
 
     d = np.asarray(d, dtype=float)
+    if d.ndim != 1:
+        raise ValueError("Direction d must be a 1D vector.")
+
     if np.any(np.isnan(d)):
-        raise ValueError("Direction 'd' contains NaNs.")
+        raise ValueError("Direction d contains NaNs.")
 
     func = f if isinstance(f, CallableFunction) else CallableFunction(f)
 
-    kind = kind if kind is not None else func.kind
-    params = params if params is not None else func.params
+    value = approximateAsymptoticFunc(func.f, d, **params)
 
-    # Try analytical form first
-    if kind is not None:
-        try:
-            form = get_analytical_form(kind)
-            if form is None:
-                if strict_kind:
-                    raise ValueError("No analytical form found for kind=%r." % kind)
-            else:
-                value = form(func.f, d, **params)
-                return AsymptoticResult(value, method="analytical", kind=kind)
-        except Exception as err:
-            if strict_kind:
-                raise ValueError("Analytical form %r failed: %s" % (kind, err))
-
-    # Default: numerical approximation
-    value = approximateAsymptoticFunc(func.f, d)
-    return AsymptoticResult(value, method="numerical")
+    return AsymptoticResult(
+        value=value,
+        method="numerical",
+        kind=None,
+        params=params
+    )
 
 
+# backwards compatibility alias
 asymptoticFunction = asymptotic_function
