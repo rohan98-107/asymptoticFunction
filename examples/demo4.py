@@ -6,10 +6,6 @@ from asymptoticFunction.heuristics.polynomial_heuristics import polynomial_empir
 from asymptoticFunction.visualization.constraints import plot_constraints_and_asymptotics
 
 
-# ------------------------------------------------------------
-# utilities
-# ------------------------------------------------------------
-
 def prune_polynomial(dirs, X, tol=1e-6):
     if dirs is None or len(dirs) == 0:
         return np.empty((0, 0))
@@ -118,10 +114,6 @@ def demo_2d():
 
         print_stats(name, 4096, raw, pruned)
 
-
-# ------------------------------------------------------------
-# 3D TESTS
-# ------------------------------------------------------------
 
 def demo_3d():
 
