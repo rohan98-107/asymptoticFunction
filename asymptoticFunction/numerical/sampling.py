@@ -3,22 +3,21 @@ import warnings
 from scipy.stats import qmc, norm
 
 
-def sign_preserving_jitter(d, n_samples, magnitude):
+def sign_preserving_jitter(d, n_samples, magnitude, seed=None):
     """
-    Generate n_samples of small perturbations that do not change
-    the sign pattern of d (keeps within same orthant).
+    Generate n_samples of small perturbations. We add additional checks to ensure that components do not 'cross zero'.
     """
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng(seed)
     n = d.size
     jitters = rng.normal(size=(n_samples, n))
-    jitters /= np.linalg.norm(jitters, axis=1, keepdims=True)
+    jitters /= np.linalg.norm(jitters, axis=1, keepdims=True) # normalize
     jitters *= magnitude
 
     d_prime = np.empty_like(jitters)
     for k, j in enumerate(jitters):
         pert = d + j
 
-        # enforce sign consistency
+        # enforce sign consistency i.e., do not allow components to be perturbed 'over' the zero boundary
         for i in range(n):
             if d[i] < 0:
                 pert[i] = min(pert[i], 0.0)
@@ -28,14 +27,15 @@ def sign_preserving_jitter(d, n_samples, magnitude):
                 # for boundary zeros, only allow nonpositive moves
                 pert[i] = min(pert[i], 0.0)
 
-        d_prime[k] = pert / np.linalg.norm(pert) if np.linalg.norm(pert) > 0 else pert
+        pert_norm = np.linalg.norm(pert)
+        d_prime[k] = pert / pert_norm if pert_norm > 0 else pert
 
     return d_prime
 
 
 def sample_sphere(n_samples=1000, dim=2, method="sobol", seed=None):
     """
-    Generate quasi-uniform samples on the unit sphere S^{dim-1}.
+    Generate samples on the unit sphere.
     """
     rng = np.random.default_rng(seed)
 
@@ -45,17 +45,18 @@ def sample_sphere(n_samples=1000, dim=2, method="sobol", seed=None):
         return X
 
     elif method == "sobol":
+        # note that this is not strictly i.i.d sampling
         sampler = qmc.Sobol(d=dim, scramble=True, seed=seed)
         U = sampler.random(n_samples)
-        Z = norm.ppf(U)
-        Z[np.isinf(Z)] = 0.0
+        Z = norm.ppf(U) # Rosenblatt transformation - not measure preserving
+        Z[np.isinf(Z)] = 0.0 # introduces discontinuities technically
         Z /= np.linalg.norm(Z, axis=1, keepdims=True)
         return Z
 
-    elif method == "fibonacci":
+    elif method == "fibonacci": # convenience purely for visual purposes in 3d
         if dim != 3:
             warnings.warn("Fibonacci is only defined for dim=3; using random fallback.")
-            return sample_sphere(n_samples, dim, method="random", seed=seed)
+            return sample_sphere(n_samples, dim, method="normal", seed=seed)
 
         k = np.arange(n_samples, dtype=float)
         phi = (1 + np.sqrt(5)) / 2

@@ -11,14 +11,14 @@ def approximateAsymptoticFunc(f, d, verbose=False, tol=1e-3, max_cycles=5):
     # --- Case 1: Undefined direction ---
     if np.any(np.isnan(d)):
         if verbose:
-            print("→ Regime: undefined direction (mixed ±inf or NaN)")
+            print("→ Undefined direction (mixed ±inf or NaN)")
         return np.nan
 
     # --- Case 2: Infinite direction (+∞ or -∞) ---
     if np.any(np.isinf(d)):
         sign = np.sign(d[np.isinf(d)][0])
         if verbose:
-            print(f"→ Regime: {'+∞' if sign > 0 else '-∞'} direction")
+            print(f"→ {'+∞' if sign > 0 else '-∞'} direction")
         try:
             probe = 1e6 * sign
             val = safe_eval(f, np.full_like(d, probe))
@@ -35,12 +35,12 @@ def approximateAsymptoticFunc(f, d, verbose=False, tol=1e-3, max_cycles=5):
     # --- Case 3: Zero direction ---
     if np.allclose(d, 0):
         if verbose:
-            print("→ Regime: zero direction")
+            print("→ Zero direction")
         return 0 if is_proper(f, d) else -INFTY
 
     # --- Case 4: Finite direction (main computation) ---
     if verbose:
-        print("→ Regime: finite direction (computing numerical liminf)")
+        print("→ Finite direction (computing numerical liminf)")
 
     n = d.size
     magnitude = 10 ** -(n / 4)

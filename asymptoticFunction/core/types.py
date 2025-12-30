@@ -1,37 +1,22 @@
-# asymptoticFunction/core/types.py
-"""
-Core function containers.
-
-Provides:
-- CallableFunction: lightweight wrapper around f(x) with optional
-  asymptotic behavior classification ("kind").
-- AsymptoticResult: structured container for asymptotic evaluations
-  used in visualization and diagnostics.
-"""
-
 from __future__ import annotations
 import numpy as np
-from typing import Callable, Optional
+from typing import Callable
 
 
 class CallableFunction:
     """
-    Wrapper for a scalar-valued callable f(x).
+    Lightweight wrapper around a scalar-valued callable f(x).
 
-    Parameters
-    ----------
-    f : callable
-        Function mapping R^n -> R
-    kind : str, optional
-        Known asymptotic behavior class (e.g. 'polynomial').
-        Interpreted by the visualization / heuristic registry.
+    Responsibilities:
+    - ensure scalar output
+    - normalize input to ndarray
+    - nothing else
     """
 
-    def __init__(self, f: Callable, *, kind: Optional[str] = None):
+    def __init__(self, f: Callable):
         if not callable(f):
             raise TypeError("Expected a callable f(x).")
         self.f = f
-        self.kind = kind
 
     def __call__(self, x) -> float:
         arr = np.asarray(x, dtype=float)
@@ -45,52 +30,33 @@ class CallableFunction:
             return float(val)
 
         raise ValueError(
-            f"f(x) returned non-scalar value with shape {val.shape}."
+            f"f(x) returned non-scalar value with shape {val.shape}"
         )
 
     def __repr__(self) -> str:
-        if self.kind is None:
-            return "CallableFunction(kind=None)"
-        return f"CallableFunction(kind='{self.kind}')"
+        return "CallableFunction()"
 
 
 class AsymptoticResult:
     """
-    Container for an asymptotic evaluation result.
+    Container for a numerical asymptotic evaluation.
 
-    This is a *visual / heuristic* asymptotic value, not an exact
-    mathematical asymptotic function.
+    NOTE:
+    This represents a numerical approximation of f_∞(d),
+    not an exact mathematical asymptotic function.
     """
 
-    def __init__(
-        self,
-        value: float,
-        *,
-        method: str,
-        kind: Optional[str] = None
-    ):
+    def __init__(self, value: float):
         self.value = float(value)
-        self.method = method  # 'heuristics' or 'numerical'
-        self.kind = kind
 
     def __repr__(self) -> str:
-        tag = f"kind='{self.kind}', " if self.kind else ""
-        return (
-            f"AsymptoticResult({tag}"
-            f"value={self.value:.6g}, method='{self.method}')"
-        )
+        return f"AsymptoticResult(value={self.value:.6g})"
 
     def to_dict(self) -> dict:
         return {
-            "value": self.value,
-            "method": self.method,
-            "kind": self.kind
+            "value": self.value
         }
 
-
-# ------------------------------------------------------------
-# Convenience
-# ------------------------------------------------------------
 
 def as_vector(x) -> np.ndarray:
     arr = np.asarray(x, dtype=float)

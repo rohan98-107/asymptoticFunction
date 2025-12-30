@@ -12,15 +12,29 @@ def negate(func):
 class AsymptoticCone:
 
     def __init__(self, f_list=None, g_list=None, x0=None, dim=None):
-        self.f_list = f_list or []
-        self.g_list = g_list or []
+        f_list = f_list or []
+        g_list = g_list or []
+
+        if x0 is None and dim is None:
+            raise ValueError("Provide either x0 or dim.")
+
         self.x0 = np.zeros(dim) if x0 is None else np.asarray(x0, float)
         self.dim = dim if dim is not None else len(self.x0)
+
+        self.f_list = [self._ensure_callable_function(s) for s in f_list]
+        self.g_list = [self._ensure_callable_function(s) for s in g_list]
 
         self.directions = None
         self.F_inf = None
         self.G_inf = None
         self.results = {}
+
+    def _ensure_callable_function(self, spec):
+        if isinstance(spec, CallableFunction):
+            return spec
+        if callable(spec):
+            return CallableFunction(spec)
+        raise TypeError(f"Constraint must be callable or CallableFunction, got {type(spec).__name__}")
 
     def _empty_dirs(self):
         return np.empty((0, self.dim), dtype=float)
@@ -31,22 +45,6 @@ class AsymptoticCone:
             return arr.reshape(1, self.dim)
         return arr
 
-    def _resolve_constraint(self, spec):
-        if isinstance(spec, CallableFunction):
-            return spec
-
-        if isinstance(spec, dict):
-            return CallableFunction(
-                spec.get("func"),
-                kind=spec.get("kind"),
-                params={k: v for k, v in spec.items() if k not in ("func", "kind")}
-            )
-
-        if callable(spec):
-            return CallableFunction(spec)
-
-        raise TypeError(f"Constraint must be callable or CallableFunction, got {type(spec).__name__}")
-
     def _compute_asymptotic_values(self, dirs):
         n_dirs = len(dirs)
         n_f = len(self.f_list)
@@ -55,13 +53,11 @@ class AsymptoticCone:
         F_inf = np.full((n_f, n_dirs), np.nan) if n_f > 0 else np.empty((0, n_dirs))
         G_inf = np.full((2 * n_g, n_dirs), np.nan) if n_g > 0 else np.empty((0, n_dirs))
 
-        for i, f_spec in enumerate(self.f_list):
-            cf = self._resolve_constraint(f_spec)
+        for i, cf in enumerate(self.f_list):
             for k, d in enumerate(dirs):
                 F_inf[i, k] = approximateAsymptoticFunc(cf.f, d)
 
-        for j, g_spec in enumerate(self.g_list):
-            cf = self._resolve_constraint(g_spec)
+        for j, cf in enumerate(self.g_list):
             g_neg = negate(cf.f)
             for k, d in enumerate(dirs):
                 G_inf[2 * j, k] = approximateAsymptoticFunc(cf.f, d)
@@ -81,20 +77,18 @@ class AsymptoticCone:
 
             for d in dirs:
                 feas = True
-                for spec in self.f_list:
-                    f = spec["func"] if isinstance(spec, dict) else spec
+                for cf in self.f_list:
                     for t in t_grid:
-                        if f(self.x0 + t * d) > tol:
+                        if cf(self.x0 + t * d) > tol:
                             feas = False
                             break
                     if not feas:
                         break
 
                 eqs = True
-                for spec in self.g_list:
-                    g = spec["func"] if isinstance(spec, dict) else spec
+                for cf in self.g_list:
                     for t in t_grid:
-                        if abs(g(self.x0 + t * d)) > tol:
+                        if abs(cf(self.x0 + t * d)) > tol:
                             eqs = False
                             break
                     if not eqs:
@@ -103,32 +97,20 @@ class AsymptoticCone:
                 if feas and eqs:
                     feasible.append(d)
 
-            if len(feasible) == 0:
-                keep = self._empty_dirs()
-            else:
-                keep = self._ensure_2d(feasible)
-
+            keep = self._empty_dirs() if len(feasible) == 0 else self._ensure_2d(feasible)
             self.results[mode] = keep
             return keep
 
-        if mode != "intersection" and mode != "outer_union":
+        if mode != "intersection":
             raise ValueError(f"Unknown mode '{mode}'")
 
         F_inf, G_inf = self._compute_asymptotic_values(dirs)
         self.F_inf = F_inf
         self.G_inf = G_inf
 
-        if mode == "intersection":
-            mask = np.all(F_inf <= tol, axis=0) & np.all(np.abs(G_inf) <= tol, axis=0)
-        else:
-            mask = np.all(F_inf <= tol, axis=0) & np.all(G_inf <= tol, axis=0)
-
+        mask = np.all(F_inf <= tol, axis=0) & np.all(G_inf <= tol, axis=0)
         keep = dirs[mask]
-
-        if keep.size == 0:
-            keep = self._empty_dirs()
-        else:
-            keep = self._ensure_2d(keep)
+        keep = self._empty_dirs() if keep.size == 0 else self._ensure_2d(keep)
 
         self.results[mode] = keep
         return keep

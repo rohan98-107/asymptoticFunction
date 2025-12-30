@@ -2,8 +2,8 @@ from ..core.config import INFTY, SEED
 import numpy as np
 
 
-def is_proper(f, x0, n_checks=100):
-    rng = np.random.default_rng(SEED)
+def is_proper(f, x0, n_checks=100, seed=None):
+    rng = np.random.default_rng(seed)
 
     x0 = np.asarray(x0, dtype=float)
 
@@ -48,7 +48,6 @@ def approximateLimInf(sequence):
 
 
 def safe_eval(f, x, magnitude_factor=1e40):
-
     x = np.asarray(x, dtype=float)
     dim = x.shape[-1] if x.ndim > 0 else 1
     tol = magnitude_factor * (10 ** (dim / 2))
@@ -75,7 +74,7 @@ def safe_eval(f, x, magnitude_factor=1e40):
         shape = x.shape[:-1] if x.ndim > 1 else ()
         return np.full(shape, np.nan)
 
-    except Exception:
+    except Exception:  # if all else fails, evaluate each vector row-wise
         if isinstance(x, np.ndarray) and x.ndim == 2:
             out = []
             for xi in x:
