@@ -1,14 +1,22 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from asymptoticFunction.core.asymptotic_cone import AsymptoticCone
 from asymptoticFunction.core.types import CallableFunction
 from asymptoticFunction.heuristics.polynomial_heuristics import polynomial_empirical_asymptotic
 from asymptoticFunction.visualization.constraints import plot_constraints_and_directions
+from asymptoticFunction.visualization.styles import (
+    use_tikz_style,
+    style_axes_2d,
+    style_axes_3d,
+)
 
 
 def prune_polynomial(dirs, X, tol=1e-6):
-    if dirs is None or len(dirs) == 0:
-        return np.empty((0, 0))
+    dirs = np.asarray(dirs, dtype=float)
+
+    if dirs.size == 0:
+        return np.empty((0, dirs.shape[1]), dtype=float)
 
     keep = []
     for d in dirs:
@@ -22,7 +30,7 @@ def prune_polynomial(dirs, X, tol=1e-6):
             keep.append(d)
 
     if len(keep) == 0:
-        return np.empty((0, dirs.shape[1]))
+        return np.empty((0, dirs.shape[1]), dtype=float)
 
     return np.asarray(keep, dtype=float)
 
@@ -44,7 +52,6 @@ def print_stats(label, n_samples, raw, pruned):
 # ------------------------------------------------------------
 
 def demo_2d():
-
     tests = [
         (
             "2D — parabolic wedge + equality",
@@ -92,31 +99,42 @@ def demo_2d():
         raw = cone.compute(mode="numerical", n_samples=4096)
         pruned = prune_polynomial(raw, X)
 
-        plot_constraints_and_directions(
+        fig, axL, axR = plot_constraints_and_directions(
             X,
             dim=2,
             view=view,
             directions=raw,
             title_left=name,
             title_right="raw numerical",
-            show=True
+            show=False
         )
 
-        plot_constraints_and_directions(
+        style_axes_2d(axL)
+        style_axes_2d(axR)
+        plt.show()
+
+        fig, axL, axR = plot_constraints_and_directions(
             X,
             dim=2,
             view=view,
             directions=pruned,
             title_left=name,
             title_right="after polynomial heuristics",
-            show=True
+            show=False
         )
+
+        style_axes_2d(axL)
+        style_axes_2d(axR)
+        plt.show()
 
         print_stats(name, 4096, raw, pruned)
 
 
-def demo_3d():
+# ------------------------------------------------------------
+# 3D TESTS
+# ------------------------------------------------------------
 
+def demo_3d():
     tests = [
         (
             "3D — parabolic cylinder",
@@ -164,25 +182,33 @@ def demo_3d():
         raw = cone.compute(mode="numerical", n_samples=8192)
         pruned = prune_polynomial(raw, X)
 
-        plot_constraints_and_directions(
+        fig, axL, axR = plot_constraints_and_directions(
             X,
             dim=3,
             view=view,
             directions=raw,
             title_left=name,
             title_right="raw numerical",
-            show=True
+            show=False
         )
 
-        plot_constraints_and_directions(
+        style_axes_3d(axL)
+        style_axes_3d(axR)
+        plt.show()
+
+        fig, axL, axR = plot_constraints_and_directions(
             X,
             dim=3,
             view=view,
             directions=pruned,
             title_left=name,
             title_right="after polynomial heuristics",
-            show=True
+            show=False
         )
+
+        style_axes_3d(axL)
+        style_axes_3d(axR)
+        plt.show()
 
         print_stats(name, 8192, raw, pruned)
 
@@ -192,6 +218,7 @@ def demo_3d():
 # ------------------------------------------------------------
 
 if __name__ == "__main__":
+    use_tikz_style()
     np.set_printoptions(precision=4, suppress=True)
     demo_2d()
     demo_3d()
