@@ -3,7 +3,7 @@ import numpy as np
 from asymptoticFunction.core.asymptotic_cone import AsymptoticCone
 from asymptoticFunction.core.types import CallableFunction
 from asymptoticFunction.heuristics.polynomial_heuristics import polynomial_empirical_asymptotic
-from asymptoticFunction.visualization.constraints import plot_constraints_and_asymptotics
+from asymptoticFunction.visualization.constraints import plot_constraints_and_directions
 
 
 def prune_polynomial(dirs, X, tol=1e-6):
@@ -92,21 +92,21 @@ def demo_2d():
         raw = cone.compute(mode="numerical", n_samples=4096)
         pruned = prune_polynomial(raw, X)
 
-        plot_constraints_and_asymptotics(
+        plot_constraints_and_directions(
             X,
             dim=2,
             view=view,
-            cone_directions=raw,
+            directions=raw,
             title_left=name,
             title_right="raw numerical",
             show=True
         )
 
-        plot_constraints_and_asymptotics(
+        plot_constraints_and_directions(
             X,
             dim=2,
             view=view,
-            cone_directions=pruned,
+            directions=pruned,
             title_left=name,
             title_right="after polynomial heuristics",
             show=True
@@ -164,21 +164,21 @@ def demo_3d():
         raw = cone.compute(mode="numerical", n_samples=8192)
         pruned = prune_polynomial(raw, X)
 
-        plot_constraints_and_asymptotics(
+        plot_constraints_and_directions(
             X,
             dim=3,
             view=view,
-            cone_directions=raw,
+            directions=raw,
             title_left=name,
             title_right="raw numerical",
             show=True
         )
 
-        plot_constraints_and_asymptotics(
+        plot_constraints_and_directions(
             X,
             dim=3,
             view=view,
-            cone_directions=pruned,
+            directions=pruned,
             title_left=name,
             title_right="after polynomial heuristics",
             show=True

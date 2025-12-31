@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from .circle import plot_directions as plot_circle
 from .sphere import plot_directions as plot_sphere
 
+from ..core.asymptotic_cone import AsymptoticCone
+
 
 def _as_callable_list(funcs):
     if funcs is None:
@@ -39,12 +41,12 @@ def _validate_view(view, dim):
 
 
 def plot_constraint_set_2d(
-    ax,
-    X,
-    view,
-    resolution=400,
-    fill_alpha=0.35,
-    boundary_width=1.0
+        ax,
+        X,
+        view,
+        resolution=400,
+        fill_alpha=0.35,
+        boundary_width=1.0
 ):
     xmin, xmax, ymin, ymax = _validate_view(view, 2)
     xs = np.linspace(xmin, xmax, resolution)
@@ -81,13 +83,13 @@ def plot_constraint_set_2d(
 
 
 def plot_constraint_set_3d(
-    ax,
-    X,
-    view,
-    resolution=45,
-    max_points=40000,
-    fill_alpha=0.08,
-    boundary_alpha=0.6
+        ax,
+        X,
+        view,
+        resolution=45,
+        max_points=40000,
+        fill_alpha=0.08,
+        boundary_alpha=0.6
 ):
     xmin, xmax, ymin, ymax, zmin, zmax = _validate_view(view, 3)
     xs = np.linspace(xmin, xmax, resolution)
@@ -144,24 +146,24 @@ def plot_constraint_set_3d(
         pass
 
 
-def plot_constraints_and_asymptotics(
-    X,
-    dim,
-    view,
-    cone_directions,
-    axL=None,
-    axR=None,
-    title_left=None,
-    title_right=None,
-    show=True,
-    circle_kwargs=None,
-    sphere_kwargs=None
+def plot_constraints_and_directions(
+        X,
+        dim,
+        view,
+        directions,
+        axL=None,
+        axR=None,
+        title_left=None,
+        title_right=None,
+        show=True,
+        circle_kwargs=None,
+        sphere_kwargs=None
 ):
     if dim not in (2, 3):
         raise ValueError("dim must be 2 or 3")
 
     _validate_view(view, dim)
-    D = _as_direction_array(cone_directions, dim)
+    D = _as_direction_array(directions, dim)
     X_list = _as_callable_list(X)
 
     created = False

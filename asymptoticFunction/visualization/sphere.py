@@ -9,26 +9,19 @@ except Exception:
     Line3DCollection = None
     Poly3DCollection = None
 
-try:
-    from scipy.spatial import ConvexHull, cKDTree
-except Exception:
-    ConvexHull = None
-    cKDTree = None
-
 
 def plot_directions(
-        directions,
-        masks=None,
-        dim=None,
-        ax=None,
-        title=None,
-        show=True,
-        rays=True,
-        ray_length=1.0,
-        geodesic_radius=0.04,
-        hull=False,
+    directions,
+    masks=None,
+    dim=None,
+    ax=None,
+    title=None,
+    show=True,
+    rays=True,
+    ray_length=1.0,
+    geodesic_radius=0.04,
 ):
-    directions = np.asarray(directions)
+    directions = np.asarray(directions, dtype=float)
 
     if directions.ndim != 2:
         raise ValueError("directions must be a 2D array")
@@ -37,7 +30,6 @@ def plot_directions(
 
     if dim is None:
         dim = d
-
     if dim != 3:
         raise NotImplementedError("sphere plotting only supports 3D")
 
@@ -45,35 +37,50 @@ def plot_directions(
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
 
+    if n == 0 or np.all(np.linalg.norm(directions, axis=1) == 0):
+        ax.scatter([0.0], [0.0], [0.0], s=24, color="steelblue")
+
+        ax.set_xlim(-1.1, 1.1)
+        ax.set_ylim(-1.1, 1.1)
+        ax.set_zlim(-1.1, 1.1)
+
+        try:
+            ax.set_box_aspect((1, 1, 1))
+        except TypeError:
+            pass
+
+        if title is not None:
+            ax.set_title(title)
+
+        if show:
+            plt.show()
+
+        return ax
+
     X = _normalize_rows(directions[:, :3])
 
-    if hull:
-        _draw_clustered_hulls_filled( # can replace with _draw_clustered_hulls_boundary()
+    if masks is None:
+        _draw_group(
             ax,
             X,
+            rays=rays,
+            ray_length=ray_length,
             geodesic_radius=geodesic_radius,
         )
     else:
-        if masks is None:
+        for name, mask in masks.items():
+            Xm = X[np.asarray(mask)]
+            if len(Xm) == 0:
+                continue
             _draw_group(
                 ax,
-                X,
+                Xm,
+                label=name,
                 rays=rays,
                 ray_length=ray_length,
                 geodesic_radius=geodesic_radius,
             )
-        else:
-            for name, mask in masks.items():
-                Xm = X[np.asarray(mask)]
-                _draw_group(
-                    ax,
-                    Xm,
-                    label=name,
-                    rays=rays,
-                    ray_length=ray_length,
-                    geodesic_radius=geodesic_radius,
-                )
-            ax.legend()
+        ax.legend()
 
     ax.set_xlim(-1.1, 1.1)
     ax.set_ylim(-1.1, 1.1)
@@ -94,12 +101,12 @@ def plot_directions(
 
 
 def _draw_group(
-        ax,
-        X,
-        label=None,
-        rays=True,
-        ray_length=1.0,
-        geodesic_radius=0.04,
+    ax,
+    X,
+    label=None,
+    rays=True,
+    ray_length=1.0,
+    geodesic_radius=0.04,
 ):
     if rays:
         _draw_rays(ax, X, label=label, ray_length=ray_length)
@@ -113,11 +120,11 @@ def _draw_group(
 
 
 def _draw_rays(ax, X, label=None, ray_length=1.0, alpha=0.6):
-    segments = np.zeros((len(X), 2, 3))
-    segments[:, 1, :] = X * ray_length
-
     if Line3DCollection is None:
         return
+
+    segments = np.zeros((len(X), 2, 3))
+    segments[:, 1, :] = X * ray_length
 
     lc = Line3DCollection(
         segments,
@@ -129,23 +136,20 @@ def _draw_rays(ax, X, label=None, ray_length=1.0, alpha=0.6):
 
 
 def _draw_geodesic_caps(
-        ax,
-        X,
-        geodesic_radius,
-        max_caps=300,
-        n_pts=20,
-        alpha_fill=0.16,
-        alpha_edge=0.35,
+    ax,
+    X,
+    geodesic_radius,
+    max_caps=300,
+    n_pts=20,
+    alpha_fill=0.16,
+    alpha_edge=0.35,
 ):
     if Poly3DCollection is None:
         return
 
     if len(X) > max_caps:
-        idx = np.random.choice(len(X), max_caps, replace=False)
+        idx = np.linspace(0, len(X) - 1, max_caps, dtype=int)
         X = X[idx]
-
-    polys = []
-    edges = []
 
     theta = np.linspace(0, 2 * np.pi, n_pts, endpoint=False)
     ct = np.cos(theta)
@@ -154,181 +158,24 @@ def _draw_geodesic_caps(
     c = np.cos(geodesic_radius)
     s = np.sin(geodesic_radius)
 
+    polys = []
+
     for d in X:
         u, v = _tangent_basis(d)
         boundary = c * d + s * (ct[:, None] * u + st[:, None] * v)
         polys.append(boundary)
-        edges.append(boundary)
+
+        if len(X) <= 80:
+            ax.plot(
+                boundary[:, 0],
+                boundary[:, 1],
+                boundary[:, 2],
+                linewidth=0.4,
+                alpha=alpha_edge,
+            )
 
     poly = Poly3DCollection(polys, alpha=alpha_fill, linewidths=0.0)
     ax.add_collection3d(poly)
-
-    if len(edges) <= 80:
-        for b in edges:
-            ax.plot(b[:, 0], b[:, 1], b[:, 2], linewidth=0.4, alpha=alpha_edge)
-
-
-def _draw_clustered_hulls_boundary(
-        ax,
-        X,
-        geodesic_radius,
-        cluster_angle=None,
-):
-    if ConvexHull is None or cKDTree is None:
-        return
-
-    if cluster_angle is None:
-        cluster_angle = 3.0 * geodesic_radius
-
-    clusters = _cluster_by_angle(X, cluster_angle)
-    hull_color = "black"
-
-    for idx in clusters:
-        P = X[idx]
-
-        if len(P) < 3:
-            P = _augment_points_in_caps(P, geodesic_radius)
-
-        if len(P) < 3:
-            continue
-
-        center = P.mean(axis=0)
-        center /= np.linalg.norm(center)
-
-        u, v = _tangent_basis(center)
-        coords = np.stack([P @ u, P @ v], axis=1)
-
-        try:
-            hull = ConvexHull(coords)
-        except Exception:
-            continue
-
-        boundary = P[hull.vertices]
-
-        ax.plot(
-            np.append(boundary[:, 0], boundary[0, 0]),
-            np.append(boundary[:, 1], boundary[0, 1]),
-            np.append(boundary[:, 2], boundary[0, 2]),
-            linewidth=1.2,
-            alpha=0.8,
-            color=hull_color
-        )
-
-
-def _draw_clustered_hulls_filled(
-        ax,
-        X,
-        geodesic_radius,
-        cluster_angle=None
-):
-    if Poly3DCollection is None:
-        return
-    if ConvexHull is None or cKDTree is None:
-        return
-
-    X = np.asarray(X)
-    if len(X) == 0:
-        return
-
-    if cluster_angle is None:
-        cluster_angle = 3.0 * geodesic_radius
-
-    clusters = _cluster_by_angle(X, cluster_angle)
-
-    tris = []
-
-    for idx in clusters:
-        P = X[idx]
-
-        if len(P) < 3:
-            P = _augment_points_in_caps(P, geodesic_radius)
-
-        if len(P) < 3:
-            continue
-
-        center = P.mean(axis=0)
-        n = np.linalg.norm(center)
-        if n == 0:
-            continue
-        center = center / n
-
-        u, v = _tangent_basis(center)
-        coords = np.stack([P @ u, P @ v], axis=1)
-
-        try:
-            hull = ConvexHull(coords)
-        except Exception:
-            continue
-
-        boundary = P[hull.vertices]
-
-        m = len(boundary)
-        for i in range(m):
-            a = boundary[i]
-            b = boundary[(i + 1) % m]
-            tris.append([center, a, b])
-
-    if len(tris) == 0:
-        return
-
-    poly = Poly3DCollection(
-        tris,
-        alpha=0.15,
-        linewidths=0.0
-    )
-    ax.add_collection3d(poly)
-
-
-def _augment_points_in_caps(P, geodesic_radius):
-    if len(P) == 1:
-        return np.vstack([P, _sample_cap(P[0], geodesic_radius, 2)])
-
-    if len(P) == 2:
-        mid = _normalize_vec(P[0] + P[1])
-        return np.vstack([P, mid])
-
-    return P
-
-
-def _sample_cap(d, geodesic_radius, k):
-    u, v = _tangent_basis(d)
-    angles = np.random.uniform(0, 2 * np.pi, size=k)
-    radii = np.random.uniform(0, geodesic_radius, size=k)
-
-    pts = (
-            np.cos(radii)[:, None] * d
-            + np.sin(radii)[:, None]
-            * (np.cos(angles)[:, None] * u + np.sin(angles)[:, None] * v)
-    )
-    return pts
-
-
-def _cluster_by_angle(X, angle):
-    r = 2.0 * np.sin(0.5 * angle)
-    tree = cKDTree(X)
-
-    visited = np.zeros(len(X), dtype=bool)
-    clusters = []
-
-    for i in range(len(X)):
-        if visited[i]:
-            continue
-
-        stack = [i]
-        visited[i] = True
-        comp = []
-
-        while stack:
-            j = stack.pop()
-            comp.append(j)
-            for k in tree.query_ball_point(X[j], r):
-                if not visited[k]:
-                    visited[k] = True
-                    stack.append(k)
-
-        clusters.append(np.array(comp))
-
-    return clusters
 
 
 def _tangent_basis(d):
@@ -346,10 +193,3 @@ def _normalize_rows(X):
     n = np.linalg.norm(X, axis=1, keepdims=True)
     n[n == 0] = 1.0
     return X / n
-
-
-def _normalize_vec(x):
-    n = np.linalg.norm(x)
-    if n == 0:
-        return x
-    return x / n
