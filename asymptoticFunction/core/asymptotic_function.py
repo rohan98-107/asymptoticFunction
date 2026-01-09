@@ -8,11 +8,6 @@ __all__ = ["asymptotic_function"]
 
 def asymptotic_function(f, d) -> AsymptoticResult:
     """
-    Numerically approximate the asymptotic value f_∞(d).
-
-    This is a pointwise diagnostic utility.
-    It is NOT used by AsymptoticCone.
-
     Parameters
     ----------
     f : callable or CallableFunction

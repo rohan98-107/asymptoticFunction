@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from mpl_toolkits.mplot3d import Axes3D
-
+from graphviz import Digraph
 
 FIG_DIR = Path("../figures")
 FIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -26,7 +26,7 @@ def figure_asymptotic_direction():
     x_min = -2.0
     x_max = x[-1] * 1.05
     y_min = -x[-1] * 0.5
-    y_max =  x[-1] * 0.5
+    y_max = x[-1] * 0.5
 
     plt.figure(figsize=(4.8, 4.8))
 
@@ -70,7 +70,7 @@ def figure_asymptotic_function():
     x = np.linspace(-2.0, 2.0, 40)
     y = np.linspace(-2.0, 2.0, 80)
     X, Y = np.meshgrid(x, y)
-    Z = Y**3 - Y
+    Z = Y ** 3 - Y
 
     fig = plt.figure(figsize=(9, 4))
 
@@ -136,7 +136,7 @@ def figure_asymptotic_cone():
     y_min, y_max = -1.0, 6.2
 
     x = np.linspace(x_min, x_max, 800)
-    y = x**2
+    y = x ** 2
 
     plt.figure(figsize=(4.8, 4.8))
 
@@ -186,7 +186,65 @@ def figure_asymptotic_cone():
     plt.close()
 
 
+def graphviz_figure_asymptotic_function_flowchat():
+    dot = Digraph(
+        name="asymptotic_function_flow",
+        format="svg"
+    )
+
+    dot.attr(rankdir="TB", fontsize="10")
+
+    # Nodes
+    dot.node("A", "asymptotic_function(f, d)")
+    dot.node("B", "Wrap f as CallableFunction")
+    dot.node("C", "Call approximateAsymptoticFunc")
+
+    dot.node("D", "Undefined direction?")
+    dot.node("E", "Infinite direction?")
+    dot.node("F", "Large-scale probe\n(t ≈ 10⁶)")
+    dot.node("G", "Zero direction?")
+    dot.node("H", "Function proper?")
+
+    dot.node("I", "Finite-direction estimation loop")
+    dot.node("J", "Sign-preserving jitter d′ → d")
+    dot.node("K", "Evaluate f(t d′) / t")
+    dot.node("L", "Approximate liminf")
+    dot.node("M", "Converged?")
+
+    dot.node("R1", "Return NaN")
+    dot.node("R2", "Return +∞ / −∞ / 0")
+    dot.node("R3", "Return 0")
+    dot.node("R4", "Return −∞")
+    dot.node("R5", "Return asymptotic value")
+
+    # Edges
+    dot.edge("A", "B")
+    dot.edge("B", "C")
+    dot.edge("C", "D")
+
+    dot.edge("D", "R1", label="yes")
+    dot.edge("D", "E", label="no")
+
+    dot.edge("E", "F", label="yes")
+    dot.edge("F", "R2")
+    dot.edge("E", "G", label="no")
+
+    dot.edge("G", "H", label="yes")
+    dot.edge("H", "R3", label="yes")
+    dot.edge("H", "R4", label="no")
+    dot.edge("G", "I", label="no")
+
+    dot.edge("I", "J")
+    dot.edge("J", "K")
+    dot.edge("K", "L")
+    dot.edge("L", "M")
+
+    dot.edge("M", "R5", label="yes")
+    dot.edge("M", "J", label="no")
+
+    # Render
+    dot.render("asymptotic_function_flow", cleanup=True)
+
+
 if __name__ == "__main__":
-    figure_asymptotic_direction()
-    figure_asymptotic_function()
-    figure_asymptotic_cone()
+    graphviz_figure_asymptotic_function_flowchat()
