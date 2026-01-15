@@ -215,7 +215,8 @@ def graphviz_figure_asymptotic_function_flowchat():
     dot.node("R2", "Return +∞ / −∞ / 0")
     dot.node("R3", "Return 0")
     dot.node("R4", "Return −∞")
-    dot.node("R5", "Return asymptotic value")
+    dot.node("R5", "Return numerical value")
+    dot.node("R6", "Wrap value AsymptoticResult")
 
     # Edges
     dot.edge("A", "B")
@@ -241,6 +242,8 @@ def graphviz_figure_asymptotic_function_flowchat():
 
     dot.edge("M", "R5", label="yes")
     dot.edge("M", "J", label="no")
+
+    dot.edge("R5", "R6")
 
     # Render
     dot.render("asymptotic_function_flow", cleanup=True)
